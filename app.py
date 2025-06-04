@@ -18,7 +18,8 @@ def generate_cv():
             data = data[0]
 
         # --- 2️⃣ Load the DOCX template ---
-        template_path = r"C:\Users\yasht\Downloads\CV_Template_Placeholders (1).docx"
+        template_path = template_path = "CV_Template_Placeholders.docx"
+        
         if not os.path.exists(template_path):
             return jsonify({"error": f"Template not found at {template_path}"}), 500
 
