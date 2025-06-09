@@ -4,48 +4,95 @@ import os
 import base64
 from docx.shared import Cm
 import io
+import json
 
 app = Flask(__name__)
+
+# Directory where your .docx templates are stored (matches your GitHub folder name)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, 'Templates')  # note capital 'T'
 
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({"message": "API is live"}), 200
 
-@app.route('/generate-cv', methods=['POST'])
-def generate_cv():
+@app.route('/generate-document', methods=['POST'])
+def generate_document():
     try:
+        # Load JSON payload
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        if isinstance(data, list) and len(data) > 0:
-            data = data[0]
+        # Unwrap if it's the OpenAI chat-completion structure
+        if isinstance(data, list) and data:
+            first = data[0]
+            if isinstance(first, dict) and 'choices' in first:
+                try:
+                    content = first['choices'][0]['message']['content']
+                    # If content is string of JSON, parse it
+                    if isinstance(content, str):
+                        content = json.loads(content)
+                    data = content
+                except Exception as unwrap_err:
+                    app.logger.warning(f"Failed to unwrap chat completion payload: {unwrap_err}")
+                    data = first
+            else:
+                # generic list: pick first element
+                data = first
 
-        template_path = os.path.join(os.path.dirname(__file__), "CV_Template_Placeholders.docx")
+        # Determine which template to use; default to CV_Template_Placeholders.docx
+        template_name = data.get('template_name', 'CV_Template_Placeholders.docx')
+
+        # Security: basic sanitization to prevent path traversal
+        if os.path.sep in template_name or not template_name.lower().endswith('.docx'):
+            return jsonify({"error": "Invalid template name, must be a .docx file"}), 400
+
+        # Resolve template path and check existence
+        template_path = os.path.join(TEMPLATES_DIR, template_name)
         if not os.path.exists(template_path):
-            return jsonify({"error": f"Template not found at {template_path}"}), 500
+            return jsonify({"error": f"Template not found: {template_name}"}), 404
 
+        # Prepare rendering context
+        context = dict(data)
+        persoons = context.pop('persoonlijkeGegevens', None)
+        if isinstance(persoons, dict):
+            context.update(persoons)
+
+        # Load and render the DOCX template
         doc = DocxTemplate(template_path)
 
-        # If a base64 photo is provided, convert to InlineImage for rendering
-        if 'photo' in data and data['photo']:
+        # Handle base64 photo if provided
+        if 'photo' in context and context['photo']:
             try:
-                image_data = base64.b64decode(data['photo'])
-                image_stream = io.BytesIO(image_data)
-                data['photo'] = InlineImage(doc, image_stream, width=Cm(4))  # Adjust size as needed
+                decoded = base64.b64decode(context['photo'])
+                image_stream = io.BytesIO(decoded)
+                context['photo'] = InlineImage(doc, image_stream, width=Cm(4))
             except Exception as img_err:
-                print("Image decode error:", img_err)
-                data['photo'] = None  # fallback if image is invalid
+                app.logger.warning(f"Image decode error: {img_err}")
+                context['photo'] = None
 
-        doc.render(data)
+        # Render with context
+        doc.render(context)
 
-        output_path = "/tmp/Generated_CV.docx"
-        doc.save(output_path)
+        # Save to a BytesIO buffer and send as a file response
+        output_stream = io.BytesIO()
+        doc.save(output_stream)
+        output_stream.seek(0)
 
-        return send_file(output_path, as_attachment=True, download_name="Generated_CV.docx")
+        return send_file(
+            output_stream,
+            as_attachment=True,
+            download_name=f"{os.path.splitext(template_name)[0]}_filled.docx",
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
     except Exception as e:
+        app.logger.error(f"Error generating document: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run()
+    # Sanity check: ensure the Templates directory exists
+    if not os.path.isdir(TEMPLATES_DIR):
+        raise RuntimeError(f"Templates folder not found at {TEMPLATES_DIR}")
+    app.run(host='0.0.0.0', port=5000)
