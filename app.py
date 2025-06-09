@@ -16,21 +16,21 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, 'Templates')  # note capital 'T'
 def home():
     return jsonify({"message": "API is live"}), 200
 
+@app.route('/generate-cv', methods=['POST'])
 @app.route('/generate-document', methods=['POST'])
 def generate_document():
     try:
-        # Load JSON payload
+        # Load and unwrap JSON payload
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        # Unwrap if it's the OpenAI chat-completion structure
+        # Unwrap OpenAI chat-completion wrapper if present
         if isinstance(data, list) and data:
             first = data[0]
             if isinstance(first, dict) and 'choices' in first:
                 try:
                     content = first['choices'][0]['message']['content']
-                    # If content is string of JSON, parse it
                     if isinstance(content, str):
                         content = json.loads(content)
                     data = content
@@ -38,31 +38,26 @@ def generate_document():
                     app.logger.warning(f"Failed to unwrap chat completion payload: {unwrap_err}")
                     data = first
             else:
-                # generic list: pick first element
+                # Generic list: use first element
                 data = first
 
-        # Determine which template to use; default to CV_Template_Placeholders.docx
+        # Determine template name
         template_name = data.get('template_name', 'CV_Template_Placeholders.docx')
-
-        # Security: basic sanitization to prevent path traversal
         if os.path.sep in template_name or not template_name.lower().endswith('.docx'):
             return jsonify({"error": "Invalid template name, must be a .docx file"}), 400
 
-        # Resolve template path and check existence
+        # Check template exists
         template_path = os.path.join(TEMPLATES_DIR, template_name)
         if not os.path.exists(template_path):
             return jsonify({"error": f"Template not found: {template_name}"}), 404
 
-        # Prepare rendering context
-        context = dict(data)
-        persoons = context.pop('persoonlijkeGegevens', None)
-        if isinstance(persoons, dict):
-            context.update(persoons)
+        # Use full data dict as context; templates can access nested fields directly
+        context = data
 
-        # Load and render the DOCX template
+        # Load and render template
         doc = DocxTemplate(template_path)
 
-        # Handle base64 photo if provided
+        # Insert image if provided
         if 'photo' in context and context['photo']:
             try:
                 decoded = base64.b64decode(context['photo'])
@@ -72,10 +67,9 @@ def generate_document():
                 app.logger.warning(f"Image decode error: {img_err}")
                 context['photo'] = None
 
-        # Render with context
         doc.render(context)
 
-        # Save to a BytesIO buffer and send as a file response
+        # Return generated document
         output_stream = io.BytesIO()
         doc.save(output_stream)
         output_stream.seek(0)
@@ -92,7 +86,6 @@ def generate_document():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    # Sanity check: ensure the Templates directory exists
     if not os.path.isdir(TEMPLATES_DIR):
         raise RuntimeError(f"Templates folder not found at {TEMPLATES_DIR}")
     app.run(host='0.0.0.0', port=5000)
