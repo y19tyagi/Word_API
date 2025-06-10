@@ -16,7 +16,7 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, 'Templates')  # note capital 'T'
 def home():
     return jsonify({"message": "API is live"}), 200
 
-@app.route('/generate-cv', methods=['POST'])
+
 @app.route('/generate-document', methods=['POST'])
 def generate_document():
     try:
