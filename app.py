@@ -80,7 +80,7 @@ def generate_document():
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name=f"{custom_name}_filled.docx",
+            download_name=f"{custom_name}",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
