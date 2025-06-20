@@ -73,11 +73,14 @@ def generate_document():
         output_stream = io.BytesIO()
         doc.save(output_stream)
         output_stream.seek(0)
-
+        # Get a custom name (fallback to template if missing)
+        person = data.get('persoonlijkeGegevens', {})
+        naam = person.get('naamVoorletters', '').strip().replace(" ", "_") or "CV"
+        custom_name = f"{naam}_Aim4.docx"
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name=f"{os.path.splitext(template_name)[0]}_filled.docx",
+            download_name=f"{custom_name}_filled.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
