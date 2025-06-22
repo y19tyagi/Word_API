@@ -76,7 +76,8 @@ def generate_document():
         # Get a custom name (fallback to template if missing)
         person = data.get('persoonlijkeGegevens', {})
         naam = person.get('naamVoorletters', '').strip().replace(" ", "_") or "CV"
-        meeting = data.get("functie_naam",'').strip().replace(" ", "_") or "Meeting"
+        vacature = data.get('vacature',{})
+        meeting = vacature.get("functie_naam",'') or "Meeting"
         if template_name == "CV_Template_Placeholders.docx":
             custom_name = f"{naam}_Aim4.docx"
         else: 
