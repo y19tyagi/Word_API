@@ -20,36 +20,34 @@ def home():
 def generate_qtc_report():
     """
     Takes the JSON from n8n 'Get Full Data' node,
-    fills the QTC-MVP Word Jinja template, and returns the generated DOCX.
+    fills the QTC-Progress_Report Word Jinja template, and returns the generated DOCX.
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        # Fixed template name
-        template_name = 'QTC-MVP.docx'
+        # Updated template name
+        template_name = 'QTC-Progress_Report.docx'
         template_path = os.path.join(TEMPLATES_DIR, template_name)
         if not os.path.exists(template_path):
             return jsonify({"error": f"Template not found: {template_name}"}), 404
 
+        # Load template
+        doc = DocxTemplate(template_path)
+
         # Prepare context for Jinja rendering
         context = data.copy()
 
-        # Handle Base64 chart image
+        # Handle Base64 chart image if present
         if 'chart' in context and context['chart']:
             try:
                 decoded = base64.b64decode(context['chart'])
                 image_stream = io.BytesIO(decoded)
-                # Replace chart with InlineImage for docxtpl
-                doc = DocxTemplate(template_path)
                 context['chart'] = InlineImage(doc, image_stream, width=Cm(12))
             except Exception as img_err:
                 app.logger.warning(f"Chart image decode error: {img_err}")
                 context['chart'] = None
-                doc = DocxTemplate(template_path)
-        else:
-            doc = DocxTemplate(template_path)
 
         # Render the template with context
         doc.render(context)
@@ -62,12 +60,12 @@ def generate_qtc_report():
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name="QTC-MVP-Report.docx",
+            download_name="QTC-Progress_Report.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
     except Exception as e:
-        app.logger.error(f"Error generating QTC-MVP report: {e}")
+        app.logger.error(f"Error generating QTC-Progress report: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/generate-document', methods=['POST'])
