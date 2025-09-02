@@ -60,7 +60,7 @@ def generate_qtc_report():
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name="QTC-Progress_Report.docx",
+            download_name="Progress report - Summary 22_08.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
