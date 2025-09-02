@@ -28,7 +28,7 @@ def generate_qtc_report():
             return jsonify({"error": "No JSON data provided"}), 400
 
         # Updated template name
-        template_name = 'QTC-Progress_Report.docx'
+        template_name = 'Progress report - Summary 22_08.docx'
         template_path = os.path.join(TEMPLATES_DIR, template_name)
         if not os.path.exists(template_path):
             return jsonify({"error": f"Template not found: {template_name}"}), 404
@@ -60,7 +60,7 @@ def generate_qtc_report():
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name="Progress report - Summary 22_08.docx",
+            download_name="QTC-Test_Report.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
