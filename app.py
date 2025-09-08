@@ -57,7 +57,7 @@ def generate_qtc_report():
         doc.save(output_stream)
         output_stream.seek(0)
         # Get filename from JSON or fallback
-        file_name = data.get("file name", "QTC-Test_Report.docx")
+        file_name = data.get("fileName", "QTC.docx")
 
         # Make sure it ends with .docx
         if not file_name.lower().endswith(".docx"):
