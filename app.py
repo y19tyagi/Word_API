@@ -56,11 +56,17 @@ def generate_qtc_report():
         output_stream = io.BytesIO()
         doc.save(output_stream)
         output_stream.seek(0)
+        # Get filename from JSON or fallback
+        file_name = data.get("file name", "QTC-Test_Report.docx")
+
+        # Make sure it ends with .docx
+        if not file_name.lower().endswith(".docx"):
+            file_name += ".docx"
 
         return send_file(
             output_stream,
             as_attachment=True,
-            download_name="QTC-Test_Report.docx",
+            download_name= file_name,
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
