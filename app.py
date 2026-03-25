@@ -28,7 +28,7 @@ def generate_qtc_report():
             return jsonify({"error": "No JSON data provided"}), 400
 
         # Updated template name
-        template_name = 'Progress report - Summary 22_08.docx'
+        template_name = 'Progress report - final version - QTC Recruitment - 2026'
         template_path = os.path.join(TEMPLATES_DIR, template_name)
         if not os.path.exists(template_path):
             return jsonify({"error": f"Template not found: {template_name}"}), 404
